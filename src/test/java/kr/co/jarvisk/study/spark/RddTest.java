@@ -8,7 +8,11 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class RddTest {
 
@@ -48,7 +52,7 @@ public class RddTest {
      */
     @Test
     public void testMapPartitions() {
-        JavaRDD<Integer> rdd1 = sc.parallelize(Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9, 10), 3);
+        JavaRDD<Integer> rdd1 = sc.parallelize(IntStream.rangeClosed(1, 10).boxed().collect(Collectors.toList()), 3);
 
         JavaRDD<Integer> rdd2 = rdd1.mapPartitions(integerIterator -> {
             System.out.println("Enter Partition!");
@@ -56,6 +60,21 @@ public class RddTest {
             integerIterator.forEachRemaining(integer -> numbers.add(integer + 1));
             return numbers.iterator();
         });
+
+        System.out.println(rdd2.collect());
+    }
+
+    @Test
+    public void testMapPartitionsWithIndex() {
+        JavaRDD<Integer> rdd1 = sc.parallelize(IntStream.rangeClosed(1, 10).boxed().collect(Collectors.toList()), 3);
+        JavaRDD<Integer> rdd2 = rdd1.mapPartitionsWithIndex((Integer index, Iterator<Integer> numbers) -> {
+            List<Integer> result = new ArrayList<>();
+            if ( index == 1 ) {
+                numbers.forEachRemaining(result::add);
+            }
+
+            return result.iterator();
+        }, true);
 
         System.out.println(rdd2.collect());
     }
