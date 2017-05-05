@@ -1,12 +1,13 @@
 package kr.co.jarvisk.study.spark;
 
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.junit.Before;
 import org.junit.Test;
-import scala.Array;
 import scala.Tuple2;
 
 import java.util.ArrayList;
@@ -22,6 +23,7 @@ public class RddTest {
 
     @Before
     public void init() {
+        Logger.getLogger("org").setLevel(Level.ERROR);
         SparkConf sparkConf = new SparkConf().setMaster("local[*]").setAppName("SparkStudy");
         sc = new JavaSparkContext(sparkConf);
     }
@@ -165,4 +167,75 @@ public class RddTest {
         JavaPairRDD<String, String> rdd4 = sc.parallelizePairs(Arrays.asList(new Tuple2<>("k2", "v4")));
         System.out.println(rdd1.cogroup(rdd2, rdd4).collect());
     }
+
+    @Test
+    public void testDistinct() {
+        JavaRDD<Integer> rdd1 = sc.parallelize(Arrays.asList(1, 2, 3, 1, 3, 1, 2, 3));
+        JavaRDD<Integer> rdd2 = rdd1.distinct();
+        System.out.println(rdd2.collect());
+    }
+
+    @Test
+    public void testCartesian() {
+        JavaRDD<Integer> rdd1 = sc.parallelize(Arrays.asList(1, 2, 3));
+        JavaRDD<String> rdd2 = sc.parallelize(Arrays.asList("a", "b", "c"));
+        JavaPairRDD<Integer, String> rdd3 = rdd1.cartesian(rdd2);
+        System.out.println(rdd3.collect());
+    }
+
+    @Test
+    public void testSubtract() {
+        JavaRDD<String> rdd1 = sc.parallelize(Arrays.asList("a", "b", "c", "d", "e"));
+        JavaRDD<String> rdd2 = sc.parallelize(Arrays.asList("d", "e"));
+        JavaRDD<String> rdd3 = rdd1.subtract(rdd2);
+
+        System.out.println(rdd3.collect());
+    }
+
+    @Test
+    public void testUnion() {
+        JavaRDD<String> rdd1 = sc.parallelize(Arrays.asList("a", "b", "c", "c"));
+        JavaRDD<String> rdd2 = sc.parallelize(Arrays.asList("d", "e", "a", "f"));
+
+        JavaRDD<String> rdd3 = rdd1.union(rdd2);
+
+        System.out.println(rdd3.collect());
+        System.out.println(rdd3.distinct().collect());
+    }
+
+    @Test
+    public void testIntersection() {
+        JavaRDD<String> rdd1 = sc.parallelize(Arrays.asList("a", "a", "b", "c"));
+        JavaRDD<String> rdd2 = sc.parallelize(Arrays.asList("a", "a", "c", "c"));
+
+        System.out.println(rdd1.intersection(rdd2).collect());
+    }
+
+    @Test
+    public void join() {
+        JavaPairRDD<String, Integer> rdd1 = sc.parallelize(Arrays.asList("a", "b", "c", "d", "e")).mapToPair(s -> new Tuple2<>(s, 1));
+        JavaPairRDD<String, Integer> rdd2 = sc.parallelize(Arrays.asList("b", "c")).mapToPair(s -> new Tuple2<>(s, 2));
+
+        JavaPairRDD<String, Tuple2<Integer, Integer>> rdd3 = rdd1.join(rdd2);
+        System.out.println(rdd3.collect());
+    }
+
+    @Test
+    public void testOuterJoin() {
+        JavaPairRDD<String, Integer> rdd1 = sc.parallelize(Arrays.asList("a", "b", "c")).mapToPair(s -> new Tuple2<>(s, 1));
+        JavaPairRDD<String, Integer> rdd2 = sc.parallelize(Arrays.asList("b", "c")).mapToPair(s -> new Tuple2<>(s, 2));
+
+        System.out.println("Left Outer Join : " + rdd1.leftOuterJoin(rdd2).collect());
+        System.out.println("Right Outer Join : " + rdd1.rightOuterJoin(rdd2).collect());
+    }
+
+    @Test
+    public void testSubtractByKey() {
+        JavaPairRDD<String, Integer> rdd1 = sc.parallelize(Arrays.asList("a", "b")).mapToPair(s -> new Tuple2<>(s, 1));
+        JavaPairRDD<String, Integer> rdd2 = sc.parallelize(Arrays.asList("b")).mapToPair(s -> new Tuple2<>(s, 2));
+
+        JavaPairRDD<String, Integer> rdd3 = rdd1.subtractByKey(rdd2);
+        System.out.println(rdd3.collect());
+    }
+
 }
